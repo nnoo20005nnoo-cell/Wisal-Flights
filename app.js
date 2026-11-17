@@ -1,5 +1,5 @@
 // ==========================================
-// 1. إعدادات المزامنة السحابية (Firebase) - مربوطة بمشروعك مباشرة
+// 1. إعدادات المزامنة السحابية (Firebase)
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAaBoshKk2_-7n_Jvt1PWDCbkObE9_CBqpI",
@@ -22,6 +22,7 @@ try {
 
 // ==========================================
 // 2. إعدادات النسخ الاحتياطي التلقائي للإيميل (EmailJS)
+// البريد المعتمد: alwisal2026@gmail.com
 // ==========================================
 const EMAILJS_PUBLIC_KEY = "ضع_هنا_PUBLIC_KEY";
 const EMAILJS_SERVICE_ID = "ضع_هنا_SERVICE_ID";
@@ -292,7 +293,7 @@ function renderTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${b.passengerName}</strong><br><small style="color:#64748b">${b.phone}</small></td>
-            <td>${b.passportNumber}<br><span style="color:#2563eb;font-size:12px;">PNR: ${b.pnrCode}</span></td>
+            <td>${b.passportNumber}<br><span style="color:#025F5F;font-size:12px;">PNR: ${b.pnrCode}</span></td>
             <td>${b.airline}<br><small>${b.route}</small></td>
             <td>${tripTypeLabels[b.tripType]}</td>
             <td>${goFormatted}</td>
@@ -358,7 +359,7 @@ function deleteBooking(id) {
 }
 
 // ==========================================
-// 7. النسخ الاحتياطي التلقائي للإيميل + تصدير Excel
+// 7. النسخ الاحتياطي التلقائي للإيميل (alwisal2026@gmail.com) + تصدير Excel
 // ==========================================
 function triggerEmailBackup(isManual = false) {
     const today = new Date().toDateString();
@@ -368,7 +369,7 @@ function triggerEmailBackup(isManual = false) {
     if (bookings.length === 0) return;
 
     if (EMAILJS_PUBLIC_KEY === "ضع_هنا_PUBLIC_KEY") {
-        if (isManual) alert("⚠️ يرجى وضع مفاتيح EmailJS في ملف app.js أولاً لتفعيل الإرسال التلقائي للإيميل.");
+        if (isManual) alert("⚠️ يرجى ربط حساب alwisal2026@gmail.com عبر EmailJS بوضع مفاتيحك في app.js.");
         return;
     }
 
@@ -377,12 +378,13 @@ function triggerEmailBackup(isManual = false) {
     ).join('\n');
 
     emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: "alwisal2026@gmail.com",
         backup_date: new Date().toLocaleString('ar-YE'),
         total_records: bookings.length,
         backup_data: formattedSummary
     }).then(() => {
         localStorage.setItem('wisal_last_email_backup', today);
-        if (isManual) alert("✅ تم إرسال نسخة احتياطية كاملة إلى بريدك الإلكتروني بنجاح!");
+        if (isManual) alert("✅ تم إرسال النسخة الاحتياطية إلى alwisal2026@gmail.com بنجاح!");
     }).catch(err => {
         if (isManual) alert("❌ حدث خطأ أثناء الإرسال: " + JSON.stringify(err));
     });
