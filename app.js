@@ -1,5 +1,5 @@
 // ==========================================
-// 1. إعدادات قاعدة البيانات السحابية الدائمة (Firebase)
+// 1. إعدادات قاعدة البيانات السحابية الدائمة
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAaBoshKk2_-7n_Jvt1PWDCbkObE9_CBqpI",
@@ -31,7 +31,7 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 2. المزامنة والتحميل الآمن والدائم من السحابة
+// 2. التحميل والمزامنة السحابية الدائمة
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
     addPassengerRow();
@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded', () => {
             renderTable();
             checkFlightsAndAlerts();
         }, (error) => {
-            console.error("فشل الاتصال السحابي، جلب النسخة المحلية:", error);
+            console.error("خطأ في الاتصال بالسحابة:", error);
             bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
             renderTable();
             checkFlightsAndAlerts();
@@ -60,7 +60,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 3. إدارة صفوف المسافرين والمرافقين (أزرار متعددة)
+// 3. إدارة صفوف المسافرين (إضافة شخص وجواز)
 // ==========================================
 function addPassengerRow(name = '', passport = '', phone = '') {
     const container = document.getElementById('passengersListContainer');
@@ -102,7 +102,7 @@ function removePassengerRow(rowId) {
 }
 
 // ==========================================
-// 4. إعدادات الرحلات والمعاينة الذكية
+// 4. إعدادات الرحلات
 // ==========================================
 function selectTripType(type) {
     document.getElementById('tripType').value = type;
@@ -170,7 +170,7 @@ function updateSmartPreview() {
 }
 
 // ==========================================
-// 5. حفظ البيانات في السحابة بشكل آمن ودائم
+// 5. حفظ البيانات في السحابة بدقة تامة
 // ==========================================
 function saveBooking(e) {
     e.preventDefault();
@@ -188,7 +188,7 @@ function saveBooking(e) {
     });
 
     if (passengersList.length === 0) {
-        alert("⚠️ يرجى إدخال بيانات مسافر واحد على الأقل بشكل صحيح.");
+        alert("⚠️ يرجى التأكد من تعبئة اسم المسافر ورقم الجواز ورقم الجوال بشكل كامل.");
         return;
     }
 
@@ -221,21 +221,23 @@ function saveBooking(e) {
     addPassengerRow();
     selectTripType('one_way');
     checkFlightsAndAlerts();
-    alert("✅ تم حفظ الحجز في قاعدة البيانات السحابية بنجاح ومحفوظ للأبد!");
+    alert("✅ تم حفظ الحجز والمرافقين في قاعدة البيانات السحابية بنجاح ولن يضيع أبداً!");
 }
 
 function syncDataToCloud() {
     localStorage.setItem('wisal_flights_data', JSON.stringify(bookings));
     if (db) {
-        db.ref('bookings').set(bookings).catch((err) => {
-            console.error("خطأ في المزامنة مع السحابة:", err);
+        db.ref('bookings').set(bookings).then(() => {
+            console.log("تم الحفظ في سحابة Firebase بنجاح");
+        }).catch((err) => {
+            alert("❌ خطأ في الحفظ السحابي: " + err.message);
         });
     }
     renderTable();
 }
 
 // ==========================================
-// 6. عرض جدول الحجوزات ونظام الـ PDF الرسمي
+// 6. عرض جدول الحجوزات ونظام PDF
 // ==========================================
 function getFlightStatus(b) {
     if (b.tripType === 'both_open') return { code: 'open', label: '⏳ مفتوحة بالكامل', badge: 'badge-open' };
@@ -334,7 +336,6 @@ function filterTable(statusCode) {
     renderTable();
 }
 
-// دالة تصدير الجدول مباشرة كملف PDF رسمي منظم
 function exportToPDF() {
     const element = document.getElementById('pdfExportArea');
     const opt = {
@@ -344,12 +345,8 @@ function exportToPDF() {
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
-
-    // إخفاء الأزرار مؤقتاً أثناء التصدير للـ PDF
     document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
-    
     html2pdf().from(element).set(opt).save().then(() => {
-        // إعادة إظهار الأزرار بعد انتهاء التحميل
         document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
     });
 }
@@ -359,9 +356,7 @@ function sendWhatsAppGroup(id) {
     if (!b) return;
     const goText = b.goDate ? new Date(b.goDate).toLocaleString('ar-YE', { dateStyle: 'full', timeStyle: 'short' }) : 'تذكرة مفتوحة';
     const namesStr = b.passengers.map(p => p.name).join('، ');
-    
-    const msg = `مرحباً بك/م *${namesStr}* ✈️\nنود تذكيركم من *مكتب الوصال للطيران* باقتراب موعد رحلتكم:\n\n📍 *خط السير:* ${b.route}\n🛫 *الطيران:* ${b.airline}\n🔖 *رقم الحجز (PNR):* ${b.pnrCode}\n📅 *موعد الرحلة:* ${goText}\n\nنتمنى لكم رحلة سعيدة وآمنة!`;
-    
+    const msg = `مرحباً بك/م *${namesStr}* ✈️\nنود تذكيركم من *مكتب الوصال للطيران* باقتراب موعد رحلتكم:\n\n📍 *خط السير:* ${b.route}\n🛫 *الطيران:* ${b.airline}\n🔖 *رقم الحجز:* ${b.pnrCode}\n📅 *موعد الرحلة:* ${goText}`;
     const firstPhone = b.passengers[0].phone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${firstPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -390,7 +385,7 @@ function editBooking(id) {
 }
 
 function deleteBooking(id) {
-    if (confirm("هل أنت متأكد من حذف هذا الحجز بكل مرافقيه من السحابة؟")) {
+    if (confirm("هل أنت متأكد من حذف هذا الحجز من السحابة؟")) {
         bookings = bookings.filter(b => b.id !== id);
         syncDataToCloud();
         checkFlightsAndAlerts();
