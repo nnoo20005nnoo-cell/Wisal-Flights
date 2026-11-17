@@ -4,9 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام الوصال للطيران | 2026</title>
+    <!-- ربط أيقونة الموقع (ضع صورتك باسم icon.png في نفس المجلد) -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <!-- ملف ربط التطبيق (PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#025F5F">
+    
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2.5">
+    <link rel="stylesheet" href="style.css?v=5.0">
 </head>
 <body>
 
@@ -28,10 +35,10 @@
 
             <div class="header-actions">
                 <button id="btnEnableNotif" class="btn-glass btn-gold" onclick="requestNotificationPermission()">
-                    <i class="fa-solid fa-bell fa-shake"></i> تفعيل إشعارات النظام
+                    <i class="fa-solid fa-bell fa-shake"></i> تفعيل الإشعارات
                 </button>
-                <button class="btn-glass btn-cyan" onclick="triggerEmailBackup(true)">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> نسخة احتياطية للإيميل
+                <button class="btn-glass btn-cyan" onclick="installAppPrompt()">
+                    <i class="fa-solid fa-mobile-screen-button"></i> تثبيت كتطبيق
                 </button>
                 <button class="btn-glass btn-dark" onclick="exportToExcel()">
                     <i class="fa-solid fa-file-excel"></i> تصدير Excel
@@ -85,14 +92,14 @@
             </div>
         </section>
 
-        <!-- قسم إضافة حجز طيران جديد -->
+        <!-- قسم إضافة حجز طيران جديد مع أزرار إضافة شخص وجواز -->
         <section class="glass-card form-section animate-fade-up">
             <div class="section-title">
                 <div class="title-icon"><i class="fa-solid fa-ticket"></i></div>
-                <h3>إضافة حجز طيران جديد</h3>
+                <h3>إضافة حجز طيران جديد (مع إمكانية إضافة مرافقين)</h3>
             </div>
 
-            <!-- أزرار تحديد نوع الرحلة الأربعة -->
+            <!-- أزرار تحديد نوع الرحلة -->
             <div class="trip-type-selector">
                 <label class="selector-label">حدد نوع التذكرة والرحلة:</label>
                 <div class="trip-buttons">
@@ -115,35 +122,21 @@
                 <input type="hidden" id="editId" value="">
                 <input type="hidden" id="tripType" value="one_way">
 
-                <div class="form-grid">
+                <!-- الحقول الأساسية للرحلة المشتركة -->
+                <div class="form-grid common-flight-details">
                     <div class="input-group">
-                        <label><i class="fa-solid fa-user"></i> اسم المسافر الكامل *</label>
-                        <input type="text" id="passengerName" required placeholder="أدخل اسم المسافر كما في الجواز...">
-                    </div>
-
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-passport"></i> رقم الجواز *</label>
-                        <input type="text" id="passportNumber" required placeholder="رقم الجواز...">
-                    </div>
-
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-barcode"></i> رقم الحجز (PNR)</label>
+                        <label><i class="fa-solid fa-barcode"></i> رقم الحجز المشترك (PNR)</label>
                         <input type="text" id="pnrCode" placeholder="مثال: X7K9LP" style="text-transform: uppercase;">
                     </div>
 
                     <div class="input-group">
                         <label><i class="fa-solid fa-plane"></i> شركة الطيران</label>
-                        <input type="text" id="airline" placeholder="مثال: اليمنية، طيران السعيدة، السعودية...">
+                        <input type="text" id="airline" placeholder="مثال: اليمنية، طيران السعيدة...">
                     </div>
 
                     <div class="input-group">
                         <label><i class="fa-solid fa-route"></i> خط السير (من - إلى)</label>
                         <input type="text" id="route" placeholder="مثال: عدن - الرياض">
-                    </div>
-
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-phone"></i> رقم جوال المسافر (للواتساب) *</label>
-                        <input type="tel" id="phone" required placeholder="مثال: 96777xxxxxxx">
                     </div>
 
                     <div class="input-group" id="goDateGroup">
@@ -155,9 +148,23 @@
                         <label><i class="fa-solid fa-calendar-check"></i> تاريخ العودة *</label>
                         <input type="datetime-local" id="returnDate" onchange="updateSmartPreview()">
                     </div>
+                </div>
 
+                <!-- قائمة المسافرين الديناميكية -->
+                <div class="passengers-container-wrapper">
+                    <div class="sub-header-row">
+                        <h4><i class="fa-solid fa-users-gear"></i> بيانات المسافرين في هذا الحجز</h4>
+                        <button type="button" class="btn-glass btn-cyan" onclick="addPassengerRow()">
+                            <i class="fa-solid fa-user-plus"></i> إضافة شخص آخر (مرافق)
+                        </button>
+                    </div>
+
+                    <div id="passengersListContainer"></div>
+                </div>
+
+                <div class="form-grid" style="margin-top: 15px;">
                     <div class="input-group full-width">
-                        <label><i class="fa-solid fa-note-sticky"></i> ملاحظات إضافية</label>
+                        <label><i class="fa-solid fa-note-sticky"></i> ملاحظات إضافية على الحجز</label>
                         <input type="text" id="notes" placeholder="وزن العفش، درجة الحجز، أو أي تفاصيل أخرى...">
                     </div>
                 </div>
@@ -204,12 +211,11 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>المسافر</th>
-                            <th>رقم الجواز / PNR</th>
+                            <th>المسافرين والجوازات</th>
+                            <th>رقم الحجز (PNR)</th>
                             <th>الطيران والوجهة</th>
                             <th>نوع التذكرة</th>
-                            <th>تاريخ الذهاب</th>
-                            <th>تاريخ العودة</th>
+                            <th>تواريخ الرحلة</th>
                             <th>حالة التنبيه</th>
                             <th>إجراءات سريعة</th>
                         </tr>
@@ -224,7 +230,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

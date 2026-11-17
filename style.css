@@ -327,6 +327,58 @@ body {
     box-shadow: 0 0 0 4px rgba(2, 165, 164, 0.15);
 }
 
+.passengers-container-wrapper {
+    margin-top: 20px;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 18px;
+}
+.sub-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.sub-header-row h4 {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--royal-teal);
+}
+.passenger-item-card {
+    background: white;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+@media (max-width: 900px) {
+    .passenger-item-card {
+        grid-template-columns: 1fr;
+    }
+}
+.remove-passenger-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: 0.2s;
+}
+.remove-passenger-btn:hover { background: #dc2626; color: white; }
+
 .smart-preview-bar {
     margin-top: 22px;
     background: linear-gradient(135deg, #f0fdfd, #e0f2f1);
@@ -448,7 +500,7 @@ tr:hover { background: #f8fafc; }
 .badge-ok { background: #d1fae5; color: #059669; }
 .badge-past { background: #f1f5f9; color: #64748b; }
 
-.action-btns { display: flex; gap: 6px; }
+.action-btns { display: flex; gap: 6px; align-items: center; }
 .btn-icon {
     width: 34px;
     height: 34px;
@@ -462,6 +514,7 @@ tr:hover { background: #f8fafc; }
     transition: 0.2s;
 }
 .btn-wa { background: #25d366; }
+.btn-gcal { background: #4285F4; }
 .btn-edit { background: var(--accent-cyan); }
 .btn-del { background: #ef4444; }
 .btn-icon:hover { transform: scale(1.1); }
