@@ -519,6 +519,12 @@ tr:hover { background: #f8fafc; }
 .btn-del { background: #ef4444; }
 .btn-icon:hover { transform: scale(1.1); }
 
+@media print {
+    .no-print, .glass-header, .form-section, .stats-grid, .alert-banner { display: none !important; }
+    body { background: white; color: black; }
+    .glass-card { box-shadow: none; border: none; padding: 0; }
+}
+
 .animate-fade-down { animation: fadeDown 0.6s ease-out; }
 .animate-fade-up { animation: fadeUp 0.6s ease-out; }
 

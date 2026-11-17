@@ -11,7 +11,9 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=6.0">
+    <!-- مكتبة لطباعة وتصدير ملفات الـ PDF باحترافية عالية -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="style.css?v=7.0">
 </head>
 <body>
 
@@ -27,7 +29,7 @@
                 </div>
                 <div>
                     <h1>نظام الوصال للطيران</h1>
-                    <span class="badge-live"><span class="pulse-dot"></span> قاعدة بيانات سحابية نشطة ودائمة</span>
+                    <span class="badge-live"><span class="pulse-dot"></span> قاعدة بيانات سحابية نشطة وآمنة 100%</span>
                 </div>
             </div>
 
@@ -38,8 +40,8 @@
                 <button class="btn-glass btn-cyan" onclick="installAppPrompt()">
                     <i class="fa-solid fa-mobile-screen-button"></i> تثبيت كتطبيق
                 </button>
-                <button class="btn-glass btn-dark" onclick="exportToExcel()">
-                    <i class="fa-solid fa-file-excel"></i> تصدير Excel
+                <button class="btn-glass btn-dark" onclick="exportToPDF()">
+                    <i class="fa-solid fa-file-pdf"></i> تصدير PDF رسمي
                 </button>
             </div>
         </header>
@@ -148,7 +150,7 @@
                     </div>
                 </div>
 
-                <!-- قائمة المسافرين والديناميكية (مع أزرار إضافة شخص وجواز) -->
+                <!-- قائمة المسافرين الديناميكية مع أزرار إضافة شخص وجواز -->
                 <div class="passengers-container-wrapper">
                     <div class="sub-header-row">
                         <h4><i class="fa-solid fa-users-gear"></i> أسماء المسافرين وأرقام الجوازات في هذا الحجز</h4>
@@ -158,7 +160,7 @@
                     </div>
 
                     <div id="passengersListContainer">
-                        <!-- يتم حقن حقول المسافرين ديناميكياً هنا -->
+                        <!-- حقن حقول المسافرين ديناميكياً -->
                     </div>
                 </div>
 
@@ -185,8 +187,8 @@
             </form>
         </section>
 
-        <!-- قسم سجل الحجوزات والبحث -->
-        <section class="glass-card table-section animate-fade-up">
+        <!-- قسم سجل الحجوزات والبحث (قابل للطباعة والتصدير كـ PDF) -->
+        <section id="pdfExportArea" class="glass-card table-section animate-fade-up">
             <div class="table-header">
                 <div class="section-title">
                     <div class="title-icon"><i class="fa-solid fa-list-check"></i></div>
@@ -217,7 +219,7 @@
                             <th>نوع التذكرة</th>
                             <th>تواريخ الرحلة</th>
                             <th>حالة التنبيه</th>
-                            <th>إجراءات سريعة</th>
+                            <th class="no-print">إجراءات سريعة</th>
                         </tr>
                     </thead>
                     <tbody id="bookingsTableBody"></tbody>

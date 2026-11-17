@@ -1,5 +1,5 @@
 // ==========================================
-// 1. إعدادات المزامنة السحابية الدائمة (Firebase Realtime Database)
+// 1. إعدادات قاعدة البيانات السحابية الدائمة (Firebase)
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAaBoshKk2_-7n_Jvt1PWDCbkObE9_CBqpI",
@@ -20,7 +20,6 @@ try {
     console.error("خطأ في تهيئة Firebase:", e);
 }
 
-// مصفوفة الحجوزات الأساسية التي ترتبط فوراً بالسحابة
 let bookings = [];
 let notifiedIds = JSON.parse(localStorage.getItem('wisal_notified_ids')) || [];
 
@@ -32,10 +31,10 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 2. الاستماع الفوري لقاعدة البيانات السحابية وجلب البيانات المفظوظة أبدياً
+// 2. المزامنة والتحميل الآمن والدائم من السحابة
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
-    addPassengerRow(); // سطر مسافر افتراضي أولي
+    addPassengerRow();
     
     if (db) {
         db.ref('bookings').on('value', (snapshot) => {
@@ -48,8 +47,7 @@ window.addEventListener('DOMContentLoaded', () => {
             renderTable();
             checkFlightsAndAlerts();
         }, (error) => {
-            console.error("خطأ في جلب البيانات من السحابة:", error);
-            // جلب احتياطي من التخزين المحلي لو انقطع النت
+            console.error("فشل الاتصال السحابي، جلب النسخة المحلية:", error);
             bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
             renderTable();
             checkFlightsAndAlerts();
@@ -62,7 +60,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 3. التحكم بأزرار إضافة شخص (مرافق) وجواز
+// 3. إدارة صفوف المسافرين والمرافقين (أزرار متعددة)
 // ==========================================
 function addPassengerRow(name = '', passport = '', phone = '') {
     const container = document.getElementById('passengersListContainer');
@@ -104,7 +102,7 @@ function removePassengerRow(rowId) {
 }
 
 // ==========================================
-// 4. التحكم الذكي بأزرار الرحلات
+// 4. إعدادات الرحلات والمعاينة الذكية
 // ==========================================
 function selectTripType(type) {
     document.getElementById('tripType').value = type;
@@ -172,7 +170,7 @@ function updateSmartPreview() {
 }
 
 // ==========================================
-// 5. حفظ وتعديل البيانات وحفظها في قاعدة البيانات السحابية نهائياً
+// 5. حفظ البيانات في السحابة بشكل آمن ودائم
 // ==========================================
 function saveBooking(e) {
     e.preventDefault();
@@ -223,23 +221,21 @@ function saveBooking(e) {
     addPassengerRow();
     selectTripType('one_way');
     checkFlightsAndAlerts();
-    alert("✅ تم حفظ الحجز في قاعدة البيانات السحابية بنجاح ولن يضيع أبداً!");
+    alert("✅ تم حفظ الحجز في قاعدة البيانات السحابية بنجاح ومحفوظ للأبد!");
 }
 
 function syncDataToCloud() {
     localStorage.setItem('wisal_flights_data', JSON.stringify(bookings));
     if (db) {
-        db.ref('bookings').set(bookings).then(() => {
-            console.log("تم الحفظ في السحابة بنجاح");
-        }).catch((error) => {
-            console.error("فشل الحفظ في السحابة:", error);
+        db.ref('bookings').set(bookings).catch((err) => {
+            console.error("خطأ في المزامنة مع السحابة:", err);
         });
     }
     renderTable();
 }
 
 // ==========================================
-// 6. محرك التنبيهات وتقويم جوجل
+// 6. عرض جدول الحجوزات ونظام الـ PDF الرسمي
 // ==========================================
 function getFlightStatus(b) {
     if (b.tripType === 'both_open') return { code: 'open', label: '⏳ مفتوحة بالكامل', badge: 'badge-open' };
@@ -266,7 +262,6 @@ function checkFlightsAndAlerts() {
             urgentCount++;
             const namesStr = b.passengers.map(p => p.name).join('، ');
             urgentNames.push(`${namesStr} (${status.label})`);
-            sendSystemPushNotification(b, status.label);
         } else if (status.code === 'open') {
             openCount++;
         } else if (status.code === 'confirmed') {
@@ -289,82 +284,6 @@ function checkFlightsAndAlerts() {
     }
 }
 
-function sendSystemPushNotification(booking, statusText) {
-    const alertKey = `${booking.id}_${new Date().toDateString()}`;
-    if (notifiedIds.includes(alertKey)) return;
-
-    notifiedIds.push(alertKey);
-    localStorage.setItem('wisal_notified_ids', JSON.stringify(notifiedIds));
-
-    const audio = document.getElementById('alertSound');
-    if (audio) audio.play().catch(() => {});
-
-    if ("Notification" in window && Notification.permission === "granted") {
-        const names = booking.passengers.map(p => p.name).join(', ');
-        new Notification("✈️ تنبيه رحلة عاجلة - نظام الوصال", {
-            body: `المسافرين: ${names}\nالحالة: ${statusText}\nرقم الحجز: ${booking.pnrCode}`,
-            icon: "icon.png"
-        });
-    }
-}
-
-function requestNotificationPermission() {
-    if (!("Notification" in window)) {
-        alert("متصفحك لا يدعم الإشعارات.");
-        return;
-    }
-    Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-            alert("✅ تم تفعيل إشعارات النظام بنجاح!");
-            checkFlightsAndAlerts();
-        }
-    });
-}
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-});
-
-function installAppPrompt() {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            deferredPrompt = null;
-        });
-    } else {
-        alert("📲 التطبيق جاهز للتثبيت! يمكنك النقر على خيارات المتصفح (القائمة الثلاثية في كروم) واختيار 'تثبيت التطبيق' أو 'Add to Home screen'.");
-    }
-}
-
-function addToGoogleCalendar(bookingId) {
-    const b = bookings.find(item => item.id === bookingId);
-    if (!b || !b.goDate) {
-        alert("⚠️ لا يوجد تاريخ ذهاب محدد لهذه التذكرة.");
-        return;
-    }
-
-    const passengersNames = b.passengers.map(p => p.name).join('، ');
-    const startDate = new Date(b.goDate);
-    const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000));
-
-    const formatGCalDate = (date) => {
-        return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
-    };
-
-    const title = encodeURIComponent(`رحلة طيران: ${passengersNames} (${b.route})`);
-    const details = encodeURIComponent(`شركة الطيران: ${b.airline}\nرقم الحجز (PNR): ${b.pnrCode}\nالمسافرين: ${passengersNames}\n--- صادر عن نظام الوصال للطيران 2026`);
-    const location = encodeURIComponent(b.route);
-    const dates = `${formatGCalDate(startDate)}/${formatGCalDate(endDate)}`;
-
-    const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
-    window.open(gCalUrl, '_blank');
-}
-
-// ==========================================
-// 7. عرض الجدول والبحث وتذكير واتساب
-// ==========================================
 function renderTable() {
     const tbody = document.getElementById('bookingsTableBody');
     const search = document.getElementById('searchInput').value.toLowerCase();
@@ -397,11 +316,11 @@ function renderTable() {
             <td>${tripTypeLabels[b.tripType]}</td>
             <td>ذهاب: ${goFormatted}<br>عودة: ${retFormatted}</td>
             <td><span class="badge ${status.badge}">${status.label}</span></td>
-            <td>
+            <td class="no-print">
                 <div class="action-btns">
-                    <button class="btn-icon btn-wa" title="إرسال واتساب للجميع" onclick="sendWhatsAppGroup('${b.id}')"><i class="fa-brands fa-whatsapp"></i></button>
-                    <button class="btn-icon btn-gcal" title="إضافة إلى تقويم جوجل (لإشعارات الهاتف)" onclick="addToGoogleCalendar('${b.id}')"><i class="fa-solid fa-calendar-plus"></i></button>
-                    <button class="btn-icon btn-edit" title="تعديل الحجز" onclick="editBooking('${b.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-icon btn-wa" title="إرسال واتساب للمجموعة" onclick="sendWhatsAppGroup('${b.id}')"><i class="fa-brands fa-whatsapp"></i></button>
+                    <button class="btn-icon btn-gcal" title="إضافة لتقويم جوجل" onclick="addToGoogleCalendar('${b.id}')"><i class="fa-solid fa-calendar-plus"></i></button>
+                    <button class="btn-icon btn-edit" title="تعديل" onclick="editBooking('${b.id}')"><i class="fa-solid fa-pen"></i></button>
                     <button class="btn-icon btn-del" title="حذف" onclick="deleteBooking('${b.id}')"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
@@ -413,6 +332,26 @@ function renderTable() {
 function filterTable(statusCode) {
     document.getElementById('statusFilter').value = statusCode;
     renderTable();
+}
+
+// دالة تصدير الجدول مباشرة كملف PDF رسمي منظم
+function exportToPDF() {
+    const element = document.getElementById('pdfExportArea');
+    const opt = {
+        margin:       10,
+        filename:     `تقرير_حجوزات_الوصال_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    // إخفاء الأزرار مؤقتاً أثناء التصدير للـ PDF
+    document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+    
+    html2pdf().from(element).set(opt).save().then(() => {
+        // إعادة إظهار الأزرار بعد انتهاء التحميل
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+    });
 }
 
 function sendWhatsAppGroup(id) {
@@ -451,23 +390,38 @@ function editBooking(id) {
 }
 
 function deleteBooking(id) {
-    if (confirm("هل أنت متأكد من حذف هذا الحجز بكل مرافقيه نهائياً من السحابة؟")) {
+    if (confirm("هل أنت متأكد من حذف هذا الحجز بكل مرافقيه من السحابة؟")) {
         bookings = bookings.filter(b => b.id !== id);
         syncDataToCloud();
         checkFlightsAndAlerts();
     }
 }
 
-function exportToExcel() {
-    let csvContent = "\uFEFFاسم المسافر,رقم الجواز,رقم الجوال,رقم الحجز PNR,شركة الطيران,خط السير,نوع التذكرة,تاريخ الذهاب,تاريخ العودة,ملاحظات\n";
-    bookings.forEach(b => {
-        b.passengers.forEach(p => {
-            csvContent += `"${p.name}","${p.passport}","${p.phone}","${b.pnrCode}","${b.airline}","${b.route}","${tripTypeLabels[b.tripType]}","${b.goDate || 'مفتوح'}","${b.returnDate || 'مفتوح'}","${b.notes}"\n`;
+function addToGoogleCalendar(bookingId) {
+    const b = bookings.find(item => item.id === bookingId);
+    if (!b || !b.goDate) {
+        alert("⚠️ لا يوجد تاريخ ذهاب محدد لهذه التذكرة.");
+        return;
+    }
+    const passengersNames = b.passengers.map(p => p.name).join('، ');
+    const startDate = new Date(b.goDate);
+    const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000));
+    const formatGCalDate = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    const title = encodeURIComponent(`رحلة طيران: ${passengersNames} (${b.route})`);
+    const details = encodeURIComponent(`شركة الطيران: ${b.airline}\nرقم الحجز: ${b.pnrCode}\nالمسافرين: ${passengersNames}`);
+    const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${formatGCalDate(startDate)}/${formatGCalDate(endDate)}&details=${details}`;
+    window.open(gCalUrl, '_blank');
+}
+
+function installAppPrompt() {
+    alert("📲 التطبيق جاهز! انقر على قائمة المتصفح (النقاط الثلاث) واختر 'تثبيت التطبيق' أو 'Add to Home screen'.");
+}
+
+function requestNotificationPermission() {
+    if ("Notification" in window) {
+        Notification.requestPermission().then(perm => {
+            if (perm === "granted") alert("✅ تم تفعيل الإشعارات بنجاح!");
         });
-    });
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `حجوزات_الوصال_للطيران_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
+    }
 }
