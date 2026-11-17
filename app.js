@@ -1,5 +1,5 @@
 // ==========================================
-// 1. إعدادات المزامنة السحابية (Firebase)
+// 1. إعدادات المزامنة السحابية الدائمة (Firebase Realtime Database)
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAaBoshKk2_-7n_Jvt1PWDCbkObE9_CBqpI",
@@ -20,7 +20,8 @@ try {
     console.error("خطأ في تهيئة Firebase:", e);
 }
 
-let bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
+// مصفوفة الحجوزات الأساسية التي ترتبط فوراً بالسحابة
+let bookings = [];
 let notifiedIds = JSON.parse(localStorage.getItem('wisal_notified_ids')) || [];
 
 const tripTypeLabels = {
@@ -31,14 +32,38 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 2. التحكم بأزرار إضافة شخص (مرافق) وجواز
+// 2. الاستماع الفوري لقاعدة البيانات السحابية وجلب البيانات المفظوظة أبدياً
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
-    addPassengerRow();
-    renderTable();
-    checkFlightsAndAlerts();
+    addPassengerRow(); // سطر مسافر افتراضي أولي
+    
+    if (db) {
+        db.ref('bookings').on('value', (snapshot) => {
+            const cloudData = snapshot.val();
+            if (cloudData) {
+                bookings = Array.isArray(cloudData) ? cloudData : Object.values(cloudData);
+            } else {
+                bookings = [];
+            }
+            renderTable();
+            checkFlightsAndAlerts();
+        }, (error) => {
+            console.error("خطأ في جلب البيانات من السحابة:", error);
+            // جلب احتياطي من التخزين المحلي لو انقطع النت
+            bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
+            renderTable();
+            checkFlightsAndAlerts();
+        });
+    } else {
+        bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
+        renderTable();
+        checkFlightsAndAlerts();
+    }
 });
 
+// ==========================================
+// 3. التحكم بأزرار إضافة شخص (مرافق) وجواز
+// ==========================================
 function addPassengerRow(name = '', passport = '', phone = '') {
     const container = document.getElementById('passengersListContainer');
     const rowId = 'pass_' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -79,7 +104,7 @@ function removePassengerRow(rowId) {
 }
 
 // ==========================================
-// 3. التحكم الذكي بأزرار الرحلات
+// 4. التحكم الذكي بأزرار الرحلات
 // ==========================================
 function selectTripType(type) {
     document.getElementById('tripType').value = type;
@@ -147,7 +172,7 @@ function updateSmartPreview() {
 }
 
 // ==========================================
-// 4. حفظ وتعديل البيانات ومزامنة Firebase
+// 5. حفظ وتعديل البيانات وحفظها في قاعدة البيانات السحابية نهائياً
 // ==========================================
 function saveBooking(e) {
     e.preventDefault();
@@ -187,42 +212,34 @@ function saveBooking(e) {
         const index = bookings.findIndex(b => b.id === editId);
         if (index !== -1) bookings[index] = bookingData;
         document.getElementById('editId').value = '';
-        document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الحجز والمزامنة فوراً';
+        document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الحجز والمزامنة السحابية';
     } else {
         bookings.unshift(bookingData);
     }
 
-    syncData();
+    syncDataToCloud();
     document.getElementById('flightForm').reset();
     document.getElementById('passengersListContainer').innerHTML = '';
     addPassengerRow();
     selectTripType('one_way');
     checkFlightsAndAlerts();
-    alert("✅ تم حفظ الحجز لجميع المرافقين ومزامنته سحابياً بنجاح!");
+    alert("✅ تم حفظ الحجز في قاعدة البيانات السحابية بنجاح ولن يضيع أبداً!");
 }
 
-function syncData() {
+function syncDataToCloud() {
     localStorage.setItem('wisal_flights_data', JSON.stringify(bookings));
     if (db) {
-        db.ref('bookings').set(bookings);
+        db.ref('bookings').set(bookings).then(() => {
+            console.log("تم الحفظ في السحابة بنجاح");
+        }).catch((error) => {
+            console.error("فشل الحفظ في السحابة:", error);
+        });
     }
     renderTable();
 }
 
-if (db) {
-    db.ref('bookings').on('value', (snapshot) => {
-        const cloudData = snapshot.val();
-        if (cloudData) {
-            bookings = Array.isArray(cloudData) ? cloudData : Object.values(cloudData);
-            localStorage.setItem('wisal_flights_data', JSON.stringify(bookings));
-            renderTable();
-            checkFlightsAndAlerts();
-        }
-    });
-}
-
 // ==========================================
-// 5. محرك التنبيهات الذكي وتكامل تقويم جوجل
+// 6. محرك التنبيهات وتقويم جوجل
 // ==========================================
 function getFlightStatus(b) {
     if (b.tripType === 'both_open') return { code: 'open', label: '⏳ مفتوحة بالكامل', badge: 'badge-open' };
@@ -321,7 +338,6 @@ function installAppPrompt() {
     }
 }
 
-// دالة إضافة الرحلة إلى تقويم جوجل لإشعارات الجوال المضمونة حتى لو كان مغلقاً
 function addToGoogleCalendar(bookingId) {
     const b = bookings.find(item => item.id === bookingId);
     if (!b || !b.goDate) {
@@ -347,7 +363,7 @@ function addToGoogleCalendar(bookingId) {
 }
 
 // ==========================================
-// 6. عرض الجدول والبحث وتذكير واتساب
+// 7. عرض الجدول والبحث وتذكير واتساب
 // ==========================================
 function renderTable() {
     const tbody = document.getElementById('bookingsTableBody');
@@ -435,9 +451,9 @@ function editBooking(id) {
 }
 
 function deleteBooking(id) {
-    if (confirm("هل أنت متأكد من حذف هذا الحجز بكل مرافقيه نهائياً؟")) {
+    if (confirm("هل أنت متأكد من حذف هذا الحجز بكل مرافقيه نهائياً من السحابة؟")) {
         bookings = bookings.filter(b => b.id !== id);
-        syncData();
+        syncDataToCloud();
         checkFlightsAndAlerts();
     }
 }

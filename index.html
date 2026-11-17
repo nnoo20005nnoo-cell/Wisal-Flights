@@ -4,16 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام الوصال للطيران | 2026</title>
-    <!-- ربط أيقونة الموقع (ضع صورتك باسم icon.png في نفس المجلد) -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
-    <!-- ملف ربط التطبيق (PWA) -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#025F5F">
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=5.0">
+    <link rel="stylesheet" href="style.css?v=6.0">
 </head>
 <body>
 
@@ -29,7 +27,7 @@
                 </div>
                 <div>
                     <h1>نظام الوصال للطيران</h1>
-                    <span class="badge-live"><span class="pulse-dot"></span> مزامنة سحابية نشطة</span>
+                    <span class="badge-live"><span class="pulse-dot"></span> قاعدة بيانات سحابية نشطة ودائمة</span>
                 </div>
             </div>
 
@@ -96,7 +94,7 @@
         <section class="glass-card form-section animate-fade-up">
             <div class="section-title">
                 <div class="title-icon"><i class="fa-solid fa-ticket"></i></div>
-                <h3>إضافة حجز طيران جديد (مع إمكانية إضافة مرافقين)</h3>
+                <h3>إضافة حجز طيران جديد (مع أزرار إضافة أشخاص وجوازات متعددة)</h3>
             </div>
 
             <!-- أزرار تحديد نوع الرحلة -->
@@ -150,16 +148,18 @@
                     </div>
                 </div>
 
-                <!-- قائمة المسافرين الديناميكية -->
+                <!-- قائمة المسافرين والديناميكية (مع أزرار إضافة شخص وجواز) -->
                 <div class="passengers-container-wrapper">
                     <div class="sub-header-row">
-                        <h4><i class="fa-solid fa-users-gear"></i> بيانات المسافرين في هذا الحجز</h4>
+                        <h4><i class="fa-solid fa-users-gear"></i> أسماء المسافرين وأرقام الجوازات في هذا الحجز</h4>
                         <button type="button" class="btn-glass btn-cyan" onclick="addPassengerRow()">
-                            <i class="fa-solid fa-user-plus"></i> إضافة شخص آخر (مرافق)
+                            <i class="fa-solid fa-user-plus"></i> إضافة شخص وجواز آخر
                         </button>
                     </div>
 
-                    <div id="passengersListContainer"></div>
+                    <div id="passengersListContainer">
+                        <!-- يتم حقن حقول المسافرين ديناميكياً هنا -->
+                    </div>
                 </div>
 
                 <div class="form-grid" style="margin-top: 15px;">
@@ -180,7 +180,7 @@
                 </div>
 
                 <button type="submit" class="btn-submit" id="submitBtn">
-                    <i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الحجز والمزامنة فوراً
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الحجز والمزامنة السحابية فوراً
                 </button>
             </form>
         </section>
@@ -190,7 +190,7 @@
             <div class="table-header">
                 <div class="section-title">
                     <div class="title-icon"><i class="fa-solid fa-list-check"></i></div>
-                    <h3>سجل حجوزات الطيران <span class="bolt">⚡</span></h3>
+                    <h3>سجل حجوزات الطيران والدائم <span class="bolt">⚡</span></h3>
                 </div>
 
                 <div class="search-filters">
