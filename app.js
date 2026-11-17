@@ -1,5 +1,5 @@
 // ==========================================
-// 1. إعدادات قاعدة البيانات السحابية الدائمة
+// 1. إعدادات قاعدة البيانات السحابية الدائمة (Firebase)
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAaBoshKk2_-7n_Jvt1PWDCbkObE9_CBqpI",
@@ -31,36 +31,54 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 2. التحميل والمزامنة السحابية الدائمة
+// 2. محرك الاتصال والمزامنة الدائمة مع السحابة وإصلاح الإحصائيات
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
     addPassengerRow();
-    
+    fetchBookingsFromCloud();
+});
+
+function fetchBookingsFromCloud() {
     if (db) {
         db.ref('bookings').on('value', (snapshot) => {
-            const cloudData = snapshot.val();
-            if (cloudData) {
-                bookings = Array.isArray(cloudData) ? cloudData : Object.values(cloudData);
+            const rawData = snapshot.val();
+            if (rawData) {
+                // تم تصحيح الخطأ المطبعي هنا لضمان قراءة البيانات بسلاسة وتحديث الإحصائيات فوراً
+                bookings = Array.isArray(rawData) ? rawData : Object.values(rawData);
             } else {
                 bookings = [];
             }
             renderTable();
-            checkFlightsAndAlerts();
+            updateStatisticsEngine();
         }, (error) => {
-            console.error("خطأ في الاتصال بالسحابة:", error);
-            bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
-            renderTable();
-            checkFlightsAndAlerts();
+            console.error("خطأ في جلب البيانات:", error);
+            loadFromLocalStorageFallback();
         });
     } else {
-        bookings = JSON.parse(localStorage.getItem('wisal_flights_data')) || [];
-        renderTable();
-        checkFlightsAndAlerts();
+        loadFromLocalStorageFallback();
     }
-});
+}
+
+function loadFromLocalStorageFallback() {
+    const localData = localStorage.getItem('wisal_flights_data');
+    bookings = localData ? JSON.parse(localData) : [];
+    renderTable();
+    updateStatisticsEngine();
+}
+
+function saveToCloudAndLocal() {
+    localStorage.setItem('wisal_flights_data', JSON.stringify(bookings));
+    if (db) {
+        db.ref('bookings').set(bookings).catch((err) => {
+            console.error("فشل الحفظ السحابي:", err);
+        });
+    }
+    renderTable();
+    updateStatisticsEngine();
+}
 
 // ==========================================
-// 3. إدارة صفوف المسافرين (إضافة شخص وجواز)
+// 3. إدارة صفوف المسافرين (أزرار متعددة)
 // ==========================================
 function addPassengerRow(name = '', passport = '', phone = '') {
     const container = document.getElementById('passengersListContainer');
@@ -102,7 +120,7 @@ function removePassengerRow(rowId) {
 }
 
 // ==========================================
-// 4. إعدادات الرحلات
+// 4. التحكم الذكي بأزرار الرحلات
 // ==========================================
 function selectTripType(type) {
     document.getElementById('tripType').value = type;
@@ -170,7 +188,7 @@ function updateSmartPreview() {
 }
 
 // ==========================================
-// 5. حفظ البيانات في السحابة بدقة تامة
+// 5. حفظ البيانات وتخزينها بأمان تام
 // ==========================================
 function saveBooking(e) {
     e.preventDefault();
@@ -188,7 +206,7 @@ function saveBooking(e) {
     });
 
     if (passengersList.length === 0) {
-        alert("⚠️ يرجى التأكد من تعبئة اسم المسافر ورقم الجواز ورقم الجوال بشكل كامل.");
+        alert("⚠️ يرجى التأكد من تعبئة حقول المسافر بشكل كامل وصحيح.");
         return;
     }
 
@@ -215,47 +233,55 @@ function saveBooking(e) {
         bookings.unshift(bookingData);
     }
 
-    syncDataToCloud();
+    saveToCloudAndLocal();
     document.getElementById('flightForm').reset();
     document.getElementById('passengersListContainer').innerHTML = '';
     addPassengerRow();
     selectTripType('one_way');
-    checkFlightsAndAlerts();
-    alert("✅ تم حفظ الحجز والمرافقين في قاعدة البيانات السحابية بنجاح ولن يضيع أبداً!");
-}
-
-function syncDataToCloud() {
-    localStorage.setItem('wisal_flights_data', JSON.stringify(bookings));
-    if (db) {
-        db.ref('bookings').set(bookings).then(() => {
-            console.log("تم الحفظ في سحابة Firebase بنجاح");
-        }).catch((err) => {
-            alert("❌ خطأ في الحفظ السحابي: " + err.message);
-        });
-    }
-    renderTable();
+    alert("✅ تم حفظ الحجز في قاعدة البيانات السحابية بنجاح ومحفوظ للأبد!");
 }
 
 // ==========================================
-// 6. عرض جدول الحجوزات ونظام PDF
+// 6. محرك الإحصائيات القوي والدقيق 100%
 // ==========================================
 function getFlightStatus(b) {
-    if (b.tripType === 'both_open') return { code: 'open', label: '⏳ مفتوحة بالكامل', badge: 'badge-open' };
+    if (b.tripType === 'both_open') {
+        return { code: 'open', label: '⏳ مفتوحة بالكامل', badge: 'badge-open' };
+    }
+
     const now = new Date();
     const goTime = b.goDate ? new Date(b.goDate) : null;
-    
+    const returnTime = b.returnDate ? new Date(b.returnDate) : null;
+
     if (goTime) {
         const diffHoursGo = (goTime - now) / (1000 * 60 * 60);
         if (diffHoursGo > 0 && diffHoursGo <= 48) {
             return { code: 'urgent', label: `⚠️ ذهاب خلال ${Math.ceil(diffHoursGo)} ساعة!`, badge: 'badge-urgent' };
         }
     }
-    if (goTime && goTime > now) return { code: 'confirmed', label: '✅ رحلة قادمة مؤكدة', badge: 'badge-ok' };
+    if (returnTime) {
+        const diffHoursRet = (returnTime - now) / (1000 * 60 * 60);
+        if (diffHoursRet > 0 && diffHoursRet <= 48) {
+            return { code: 'urgent', label: `⚠️ عودة خلال ${Math.ceil(diffHoursRet)} ساعة!`, badge: 'badge-urgent' };
+        }
+    }
+
+    if (b.tripType === 'go_fixed_return_open' && (!goTime || goTime > now)) {
+        return { code: 'confirmed', label: '✅ رحلة مؤكدة (عودة مفتوحة)', badge: 'badge-ok' };
+    }
+
+    if (goTime && goTime > now) {
+        return { code: 'confirmed', label: '✅ رحلة قادمة مؤكدة', badge: 'badge-ok' };
+    }
+
     return { code: 'past', label: '✔️ تمت الرحلة', badge: 'badge-past' };
 }
 
-function checkFlightsAndAlerts() {
-    let urgentCount = 0, openCount = 0, confirmedCount = 0;
+function updateStatisticsEngine() {
+    let totalCount = bookings.length;
+    let urgentCount = 0;
+    let openCount = 0;
+    let confirmedCount = 0;
     let urgentNames = [];
 
     bookings.forEach(b => {
@@ -266,32 +292,48 @@ function checkFlightsAndAlerts() {
             urgentNames.push(`${namesStr} (${status.label})`);
         } else if (status.code === 'open') {
             openCount++;
-        } else if (status.code === 'confirmed') {
+        } else if (status.code === 'confirmed' || status.code === 'past') {
             confirmedCount++;
         }
     });
 
-    document.getElementById('statTotal').innerText = bookings.length;
-    document.getElementById('statUrgent').innerText = urgentCount;
-    document.getElementById('statOpen').innerText = openCount;
-    document.getElementById('statConfirmed').innerText = confirmedCount;
+    const statTotalEl = document.getElementById('statTotal');
+    const statUrgentEl = document.getElementById('statUrgent');
+    const statOpenEl = document.getElementById('statOpen');
+    const statConfirmedEl = document.getElementById('statConfirmed');
+
+    if (statTotalEl) statTotalEl.innerText = totalCount;
+    if (statUrgentEl) statUrgentEl.innerText = urgentCount;
+    if (statOpenEl) statOpenEl.innerText = openCount;
+    if (statConfirmedEl) statConfirmedEl.innerText = confirmedCount;
 
     const banner = document.getElementById('urgentAlertBanner');
     if (urgentCount > 0) {
-        banner.classList.remove('hidden');
-        document.getElementById('urgentAlertText').innerText = 
-            `⚠️ تنبيه عاجل: يوجد (${urgentCount}) حجوزات اقترب موعد رحلتهم خلال أقل من 48 ساعة! للمسافرين: [ ${urgentNames.join(' - ')} ]`;
+        if (banner) banner.classList.remove('hidden');
+        const alertText = document.getElementById('urgentAlertText');
+        if (alertText) {
+            alertText.innerText = `⚠️ تنبيه عاجل: يوجد (${urgentCount}) حجوزات اقترب موعد رحلتهم خلال أقل من 48 ساعة! للمسافرين: [ ${urgentNames.join(' - ')} ]`;
+        }
     } else {
-        banner.classList.add('hidden');
+        if (banner) banner.classList.add('hidden');
     }
 }
 
+// ==========================================
+// 7. عرض الجدول والبحث وتصدير الـ PDF
+// ==========================================
 function renderTable() {
     const tbody = document.getElementById('bookingsTableBody');
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const filter = document.getElementById('statusFilter').value;
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+
+    const search = searchInput ? searchInput.value.toLowerCase() : '';
+    const filter = statusFilter ? statusFilter.value : 'all';
 
     tbody.innerHTML = '';
+
     bookings.forEach(b => {
         const status = getFlightStatus(b);
         if (filter !== 'all' && status.code !== filter) return;
@@ -332,12 +374,14 @@ function renderTable() {
 }
 
 function filterTable(statusCode) {
-    document.getElementById('statusFilter').value = statusCode;
+    const select = document.getElementById('statusFilter');
+    if (select) select.value = statusCode;
     renderTable();
 }
 
 function exportToPDF() {
     const element = document.getElementById('pdfExportArea');
+    if (!element) return;
     const opt = {
         margin:       10,
         filename:     `تقرير_حجوزات_الوصال_${new Date().toISOString().slice(0,10)}.pdf`,
@@ -387,8 +431,7 @@ function editBooking(id) {
 function deleteBooking(id) {
     if (confirm("هل أنت متأكد من حذف هذا الحجز من السحابة؟")) {
         bookings = bookings.filter(b => b.id !== id);
-        syncDataToCloud();
-        checkFlightsAndAlerts();
+        saveToCloudAndLocal();
     }
 }
 

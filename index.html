@@ -11,9 +11,8 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- مكتبة لطباعة وتصدير ملفات الـ PDF باحترافية عالية -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="style.css?v=7.0">
+    <link rel="stylesheet" href="style.css?v=8.0">
 </head>
 <body>
 
@@ -21,7 +20,7 @@
     <div class="bg-orb orb-2"></div>
 
     <div class="container">
-        <!-- الهيدر العلوي بتركوازي غامق فاخر -->
+        <!-- الهيدر العلوي -->
         <header class="glass-header animate-fade-down">
             <div class="brand-section">
                 <div class="logo-box">
@@ -57,14 +56,14 @@
             </button>
         </div>
 
-        <!-- لوحة الإحصائيات الرباعية -->
+        <!-- لوحة الإحصائيات الرباعية (مع أيقونة إنسان خفيفة للإجمالي) -->
         <section class="stats-grid animate-fade-up">
             <div class="stat-card card-teal" onclick="filterTable('all')">
                 <div class="stat-info">
                     <p>إجمالي الحجوزات</p>
                     <h2 id="statTotal">0</h2>
                 </div>
-                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                <div class="stat-icon"><i class="fa-solid fa-user-group"></i></div>
             </div>
 
             <div class="stat-card card-amber" onclick="filterTable('urgent')">
@@ -187,7 +186,7 @@
             </form>
         </section>
 
-        <!-- قسم سجل الحجوزات والبحث (قابل للطباعة والتصدير كـ PDF) -->
+        <!-- قسم سجل الحجوزات والبحث -->
         <section id="pdfExportArea" class="glass-card table-section animate-fade-up">
             <div class="table-header">
                 <div class="section-title">
