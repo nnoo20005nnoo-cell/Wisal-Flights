@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الوصال للطيران | 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="container">
+        <!-- الهيدر العلوي بتصميم 2026 -->
+        <header class="glass-header animate-fade-down">
+            <div class="brand-section">
+                <div class="logo-box">
+                    <i class="fa-solid fa-plane-departure fa-bounce-slow"></i>
+                </div>
+                <div>
+                    <h1>نظام الوصال للطيران</h1>
+                    <span class="badge-live"><span class="pulse-dot"></span> مزامنة سحابية نشطة</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button id="btnEnableNotif" class="btn-glass btn-gold" onclick="requestNotificationPermission()">
+                    <i class="fa-solid fa-bell fa-shake"></i> تفعيل إشعارات النظام
+                </button>
+                <button class="btn-glass btn-cyan" onclick="triggerEmailBackup(true)">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> نسخة احتياطية للإيميل
+                </button>
+                <button class="btn-glass btn-dark" onclick="exportToExcel()">
+                    <i class="fa-solid fa-file-excel"></i> تصدير Excel
+                </button>
+            </div>
+        </header>
+
+        <!-- شريط التنبيهات العاجلة (قبل 48 ساعة) -->
+        <div id="urgentAlertBanner" class="alert-banner hidden animate-pulse-border">
+            <div class="alert-content">
+                <i class="fa-solid fa-triangle-exclamation fa-beat"></i>
+                <span id="urgentAlertText">تنبيه هام: جاري فحص الرحلات...</span>
+            </div>
+            <button class="close-alert" onclick="document.getElementById('urgentAlertBanner').classList.add('hidden')">
+                إغلاق <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- لوحة الإحصائيات الرباعية -->
+        <section class="stats-grid animate-fade-up">
+            <div class="stat-card card-blue" onclick="filterTable('all')">
+                <div class="stat-info">
+                    <p>إجمالي الحجوزات</p>
+                    <h2 id="statTotal">0</h2>
+                </div>
+                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            </div>
+
+            <div class="stat-card card-amber" onclick="filterTable('urgent')">
+                <div class="stat-info">
+                    <p>رحلات خلال 48 ساعة (تواصل فوراً)</p>
+                    <h2 id="statUrgent">0</h2>
+                </div>
+                <div class="stat-icon"><i class="fa-solid fa-clock-rotate-left fa-spin-pulse"></i></div>
+            </div>
+
+            <div class="stat-card card-purple" onclick="filterTable('open')">
+                <div class="stat-info">
+                    <p>تذاكر مفتوحة (بانتظار التحديد)</p>
+                    <h2 id="statOpen">0</h2>
+                </div>
+                <div class="stat-icon"><i class="fa-solid fa-calendar-question"></i></div>
+            </div>
+
+            <div class="stat-card card-emerald" onclick="filterTable('confirmed')">
+                <div class="stat-info">
+                    <p>رحلات مؤكدة مجدولة</p>
+                    <h2 id="statConfirmed">0</h2>
+                </div>
+                <div class="stat-icon"><i class="fa-solid fa-plane-circle-check"></i></div>
+            </div>
+        </section>
+
+        <!-- قسم إضافة حجز طيران جديد -->
+        <section class="glass-card form-section animate-fade-up">
+            <div class="section-title">
+                <div class="title-icon"><i class="fa-solid fa-ticket"></i></div>
+                <h3>إضافة حجز طيران جديد</h3>
+            </div>
+
+            <!-- أزرار تحديد نوع الرحلة الأربعة -->
+            <div class="trip-type-selector">
+                <label class="selector-label">حدد نوع التذكرة والرحلة:</label>
+                <div class="trip-buttons">
+                    <button type="button" class="trip-btn active" data-type="one_way" onclick="selectTripType('one_way')">
+                        <i class="fa-solid fa-arrow-left-long"></i> ذهاب فقط
+                    </button>
+                    <button type="button" class="trip-btn" data-type="round_fixed" onclick="selectTripType('round_fixed')">
+                        <i class="fa-solid fa-right-left"></i> ذهاب وعودة محدد
+                    </button>
+                    <button type="button" class="trip-btn" data-type="go_fixed_return_open" onclick="selectTripType('go_fixed_return_open')">
+                        <i class="fa-solid fa-plane-departure"></i> ذهاب محدد وعودة مفتوح
+                    </button>
+                    <button type="button" class="trip-btn" data-type="both_open" onclick="selectTripType('both_open')">
+                        <i class="fa-solid fa-infinity"></i> ذهاب مفتوح وعودة مفتوح
+                    </button>
+                </div>
+            </div>
+
+            <form id="flightForm" onsubmit="saveBooking(event)">
+                <input type="hidden" id="editId" value="">
+                <input type="hidden" id="tripType" value="one_way">
+
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label><i class="fa-solid fa-user"></i> اسم المسافر الكامل *</label>
+                        <input type="text" id="passengerName" required placeholder="أدخل اسم المسافر كما في الجواز...">
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fa-solid fa-passport"></i> رقم الجواز *</label>
+                        <input type="text" id="passportNumber" required placeholder="رقم الجواز...">
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fa-solid fa-barcode"></i> رقم الحجز (PNR)</label>
+                        <input type="text" id="pnrCode" placeholder="مثال: X7K9LP" style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fa-solid fa-plane"></i> شركة الطيران</label>
+                        <input type="text" id="airline" placeholder="مثال: اليمنية، طيران السعيدة، السعودية...">
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fa-solid fa-route"></i> خط السير (من - إلى)</label>
+                        <input type="text" id="route" placeholder="مثال: عدن - الرياض">
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fa-solid fa-phone"></i> رقم جوال المسافر (للواتساب) *</label>
+                        <input type="tel" id="phone" required placeholder="مثال: 96777xxxxxxx">
+                    </div>
+
+                    <div class="input-group" id="goDateGroup">
+                        <label><i class="fa-solid fa-calendar-day"></i> تاريخ الذهاب (الدخول) *</label>
+                        <input type="datetime-local" id="goDate" required onchange="updateSmartPreview()">
+                    </div>
+
+                    <div class="input-group hidden" id="returnDateGroup">
+                        <label><i class="fa-solid fa-calendar-check"></i> تاريخ العودة *</label>
+                        <input type="datetime-local" id="returnDate" onchange="updateSmartPreview()">
+                    </div>
+
+                    <div class="input-group full-width">
+                        <label><i class="fa-solid fa-note-sticky"></i> ملاحظات إضافية</label>
+                        <input type="text" id="notes" placeholder="وزن العفش، درجة الحجز، أو أي تفاصيل أخرى...">
+                    </div>
+                </div>
+
+                <!-- شريط المعاينة الذكية لموعد التنبيه -->
+                <div class="smart-preview-bar">
+                    <div>
+                        <i class="fa-solid fa-bell-concierge"></i>
+                        <span>موعد التنبيه التلقائي لإبلاغ العميل (قبل 48 ساعة): </span>
+                        <strong id="previewAlertTime">يرجى تحديد تاريخ الرحلة...</strong>
+                    </div>
+                    <div id="previewTripStatus" class="status-pill">نوع الرحلة: ذهاب فقط</div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الحجز والمزامنة فوراً
+                </button>
+            </form>
+        </section>
+
+        <!-- قسم سجل الحجوزات والبحث -->
+        <section class="glass-card table-section animate-fade-up">
+            <div class="table-header">
+                <div class="section-title">
+                    <div class="title-icon"><i class="fa-solid fa-list-check"></i></div>
+                    <h3>سجل حجوزات الطيران <span class="bolt">⚡</span></h3>
+                </div>
+
+                <div class="search-filters">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="ابحث بالاسم، الجواز، PNR، أو الوجهة...">
+                    </div>
+                    <select id="statusFilter" onchange="renderTable()" class="filter-select">
+                        <option value="all">جميع الحجوزات</option>
+                        <option value="urgent">⚠️ عاجل (خلال 48 ساعة)</option>
+                        <option value="open">⏳ تذاكر مفتوحة</option>
+                        <option value="confirmed">✅ رحلات مؤكدة</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>المسافر</th>
+                            <th>رقم الجواز / PNR</th>
+                            <th>الطيران والوجهة</th>
+                            <th>نوع التذكرة</th>
+                            <th>تاريخ الذهاب</th>
+                            <th>تاريخ العودة</th>
+                            <th>حالة التنبيه</th>
+                            <th>إجراءات سريعة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookingsTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <audio id="alertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
