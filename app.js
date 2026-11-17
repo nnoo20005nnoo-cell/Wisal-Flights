@@ -21,8 +21,7 @@ try {
 }
 
 // ==========================================
-// 2. إعدادات النسخ الاحتياطي التلقائي للإيميل (EmailJS)
-// البريد المعتمد: alwisal2026@gmail.com
+// 2. إعدادات النسخ الاحتياطي التلقائي (alwisal2026@gmail.com)
 // ==========================================
 const EMAILJS_PUBLIC_KEY = "ضع_هنا_PUBLIC_KEY";
 const EMAILJS_SERVICE_ID = "ضع_هنا_SERVICE_ID";
@@ -43,7 +42,7 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 3. التحكم الذكي في أزرار نوع الرحلة الأربعة
+// 3. التحكم الذكي بأزرار الرحلات
 // ==========================================
 function selectTripType(type) {
     document.getElementById('tripType').value = type;
@@ -94,7 +93,7 @@ function updateSmartPreview() {
     const previewEl = document.getElementById('previewAlertTime');
 
     if (type === 'both_open') {
-        previewEl.innerText = "تذكرة مفتوحة بالكامل (تظهر في قائمة التذاكر المفتوحة للمتابعة)";
+        previewEl.innerText = "تذكرة مفتوحة بالكامل للمتابعة";
         return;
     }
 
@@ -168,7 +167,7 @@ if (db) {
 }
 
 // ==========================================
-// 5. محرك الفحص المستمر والتنبيه قبل 48 ساعة
+// 5. محرك التنبيهات (قبل 48 ساعة)
 // ==========================================
 function getFlightStatus(b) {
     if (b.tripType === 'both_open') {
@@ -232,7 +231,7 @@ function checkFlightsAndAlerts() {
     if (urgentCount > 0) {
         banner.classList.remove('hidden');
         document.getElementById('urgentAlertText').innerText = 
-            `تنبيه هام جداً: يوجد (${urgentCount}) مسافرين اقترب موعد رحلتهم خلال أقل من 48 ساعة! يرجى التواصل معهم فوراً لتأكيد الحجز: [ ${urgentNames.join(' - ')} ]`;
+            `تنبيه هام جداً: يوجد (${urgentCount}) مسافرين اقترب موعد رحلتهم خلال أقل من 48 ساعة! يرجى التواصل معهم فوراً: [ ${urgentNames.join(' - ')} ]`;
     } else {
         banner.classList.add('hidden');
     }
@@ -250,7 +249,7 @@ function sendSystemPushNotification(booking, statusText) {
 
     if ("Notification" in window && Notification.permission === "granted") {
         new Notification("✈️ تنبيه رحلة - نظام الوصال للطيران", {
-            body: `يجب إبلاغ العميل: ${booking.passengerName}\nالحالة: ${statusText}\nرقم الجواز: ${booking.passportNumber}`,
+            body: `إبلاغ العميل: ${booking.passengerName}\nالحالة: ${statusText}\nرقم الجواز: ${booking.passportNumber}`,
             icon: "https://cdn-icons-png.flaticon.com/512/3125/3125713.png"
         });
     }
@@ -258,19 +257,19 @@ function sendSystemPushNotification(booking, statusText) {
 
 function requestNotificationPermission() {
     if (!("Notification" in window)) {
-        alert("متصفحك لا يدعم الإشعارات المنبثقة.");
+        alert("متصفحك لا يدعم الإشعارات.");
         return;
     }
     Notification.requestPermission().then(permission => {
         if (permission === "granted") {
-            alert("✅ تم تفعيل إشعارات النظام بنجاح! سيصلك تنبيه صوتي ومرئي قبل أي رحلة بـ 48 ساعة.");
+            alert("✅ تم تفعيل إشعارات النظام بنجاح!");
             checkFlightsAndAlerts();
         }
     });
 }
 
 // ==========================================
-// 6. عرض الجدول والبحث والتواصل السريع بالواتساب
+// 6. عرض الجدول والبحث وتذكير واتساب
 // ==========================================
 function renderTable() {
     const tbody = document.getElementById('bookingsTableBody');
@@ -293,7 +292,7 @@ function renderTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${b.passengerName}</strong><br><small style="color:#64748b">${b.phone}</small></td>
-            <td>${b.passportNumber}<br><span style="color:#025F5F;font-size:12px;">PNR: ${b.pnrCode}</span></td>
+            <td>${b.passportNumber}<br><span style="color:var(--royal-teal);font-size:12px;">PNR: ${b.pnrCode}</span></td>
             <td>${b.airline}<br><small>${b.route}</small></td>
             <td>${tripTypeLabels[b.tripType]}</td>
             <td>${goFormatted}</td>
@@ -301,7 +300,7 @@ function renderTable() {
             <td><span class="badge ${status.badge}">${status.label}</span></td>
             <td>
                 <div class="action-btns">
-                    <button class="btn-icon btn-wa" title="إرسال تذكير واتساب للعميل" onclick="sendWhatsAppReminder('${b.id}')">
+                    <button class="btn-icon btn-wa" title="واتساب" onclick="sendWhatsAppReminder('${b.id}')">
                         <i class="fa-brands fa-whatsapp"></i>
                     </button>
                     <button class="btn-icon btn-edit" title="تعديل" onclick="editBooking('${b.id}')">
@@ -359,7 +358,7 @@ function deleteBooking(id) {
 }
 
 // ==========================================
-// 7. النسخ الاحتياطي التلقائي للإيميل (alwisal2026@gmail.com) + تصدير Excel
+// 7. النسخ الاحتياطي للإيميل (alwisal2026@gmail.com)
 // ==========================================
 function triggerEmailBackup(isManual = false) {
     const today = new Date().toDateString();
@@ -403,7 +402,7 @@ function exportToExcel() {
 }
 
 // ==========================================
-// 8. التشغيل التلقائي والفحص الدوري كل دقيقة
+// 8. التشغيل التلقائي والفحص الدوري
 // ==========================================
 window.onload = () => {
     renderTable();
