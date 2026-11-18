@@ -31,7 +31,7 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 2. محرك الاتصال والمزامنة الدائمة مع السحابة ومعالجة الحجوزات القديمة
+// 2. محرك الاتصال والمزامنة الدائمة مع السحابة وإصلاح الإحصائيات
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
     addPassengerRow();
@@ -44,8 +44,6 @@ function fetchBookingsFromCloud() {
             const rawData = snapshot.val();
             if (rawData) {
                 let loadedArray = Array.isArray(rawData) ? rawData : Object.values(rawData);
-                
-                // معالجة آمنة لتنظيف أي بيانات قديمة غير مطابقة للهيكلة الجديدة لمنع خطأ map
                 bookings = loadedArray.map(b => {
                     if (!b.passengers || !Array.isArray(b.passengers)) {
                         b.passengers = [{
@@ -345,7 +343,7 @@ function updateStatisticsEngine() {
 }
 
 // ==========================================
-// 7. عرض الجدول والبحث وتصدير الـ PDF
+// 7. عرض الجدول والبحث وتصدير الـ PDF (بدون أيقونة الشخص)
 // ==========================================
 function renderTable() {
     const tbody = document.getElementById('bookingsTableBody');
@@ -371,9 +369,10 @@ function renderTable() {
         const goFormatted = b.goDate ? new Date(b.goDate).toLocaleString('ar-YE', { dateStyle: 'short', timeStyle: 'short' }) : 'مفتوح ⏳';
         const retFormatted = b.tripType === 'one_way' ? '---' : (b.returnDate ? new Date(b.returnDate).toLocaleString('ar-YE', { dateStyle: 'short', timeStyle: 'short' }) : 'مفتوح ⏳');
 
+        // تم حذف أكونق الأيقونة البرتقالية/البنفسجية من هنا نهائياً
         let passengersHtml = passengersArr.map(p => `
             <div style="margin-bottom: 4px;">
-                <strong>👤 ${p.name}</strong><br>
+                <strong>${p.name}</strong><br>
                 <small style="color:var(--royal-teal);">جواز: ${p.passport} | جوال: ${p.phone}</small>
             </div>
         `).join('<hr style="border:0; border-top:1px dashed #cbd5e1; margin:4px 0;">');
