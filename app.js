@@ -31,7 +31,7 @@ const tripTypeLabels = {
 };
 
 // ==========================================
-// 2. محرك الاتصال والمزامنة الدائمة مع السحابة وإصلاح الإحصائيات
+// 2. محرك الاتصال والمزامنة الدائمة مع السحابة ومعالجة الحجوزات القديمة
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
     addPassengerRow();
@@ -43,8 +43,19 @@ function fetchBookingsFromCloud() {
         db.ref('bookings').on('value', (snapshot) => {
             const rawData = snapshot.val();
             if (rawData) {
-                // تم تصحيح الخطأ المطبعي هنا لضمان قراءة البيانات بسلاسة وتحديث الإحصائيات فوراً
-                bookings = Array.isArray(rawData) ? rawData : Object.values(rawData);
+                let loadedArray = Array.isArray(rawData) ? rawData : Object.values(rawData);
+                
+                // معالجة آمنة لتنظيف أي بيانات قديمة غير مطابقة للهيكلة الجديدة لمنع خطأ map
+                bookings = loadedArray.map(b => {
+                    if (!b.passengers || !Array.isArray(b.passengers)) {
+                        b.passengers = [{
+                            name: b.passengerName || 'عميل غير مسجل',
+                            passport: b.passportNumber || '---',
+                            phone: b.phone || '000000000'
+                        }];
+                    }
+                    return b;
+                });
             } else {
                 bookings = [];
             }
@@ -61,7 +72,21 @@ function fetchBookingsFromCloud() {
 
 function loadFromLocalStorageFallback() {
     const localData = localStorage.getItem('wisal_flights_data');
-    bookings = localData ? JSON.parse(localData) : [];
+    if (localData) {
+        let loadedArray = JSON.parse(localData);
+        bookings = loadedArray.map(b => {
+            if (!b.passengers || !Array.isArray(b.passengers)) {
+                b.passengers = [{
+                    name: b.passengerName || 'عميل غير مسجل',
+                    passport: b.passportNumber || '---',
+                    phone: b.phone || '000000000'
+                }];
+            }
+            return b;
+        });
+    } else {
+        bookings = [];
+    }
     renderTable();
     updateStatisticsEngine();
 }
@@ -288,7 +313,7 @@ function updateStatisticsEngine() {
         const status = getFlightStatus(b);
         if (status.code === 'urgent') {
             urgentCount++;
-            const namesStr = b.passengers.map(p => p.name).join('، ');
+            const namesStr = b.passengers && Array.isArray(b.passengers) ? b.passengers.map(p => p.name).join('، ') : 'عميل';
             urgentNames.push(`${namesStr} (${status.label})`);
         } else if (status.code === 'open') {
             openCount++;
@@ -338,14 +363,15 @@ function renderTable() {
         const status = getFlightStatus(b);
         if (filter !== 'all' && status.code !== filter) return;
 
-        const allNames = b.passengers.map(p => `${p.name} ${p.passport} ${p.phone}`).join(' ');
+        const passengersArr = b.passengers && Array.isArray(b.passengers) ? b.passengers : [];
+        const allNames = passengersArr.map(p => `${p.name} ${p.passport} ${p.phone}`).join(' ');
         const matchText = `${allNames} ${b.pnrCode} ${b.route} ${b.airline}`.toLowerCase();
         if (!matchText.includes(search)) return;
 
         const goFormatted = b.goDate ? new Date(b.goDate).toLocaleString('ar-YE', { dateStyle: 'short', timeStyle: 'short' }) : 'مفتوح ⏳';
         const retFormatted = b.tripType === 'one_way' ? '---' : (b.returnDate ? new Date(b.returnDate).toLocaleString('ar-YE', { dateStyle: 'short', timeStyle: 'short' }) : 'مفتوح ⏳');
 
-        let passengersHtml = b.passengers.map(p => `
+        let passengersHtml = passengersArr.map(p => `
             <div style="margin-bottom: 4px;">
                 <strong>👤 ${p.name}</strong><br>
                 <small style="color:var(--royal-teal);">جواز: ${p.passport} | جوال: ${p.phone}</small>
@@ -399,9 +425,10 @@ function sendWhatsAppGroup(id) {
     const b = bookings.find(item => item.id === id);
     if (!b) return;
     const goText = b.goDate ? new Date(b.goDate).toLocaleString('ar-YE', { dateStyle: 'full', timeStyle: 'short' }) : 'تذكرة مفتوحة';
-    const namesStr = b.passengers.map(p => p.name).join('، ');
+    const passengersArr = b.passengers && Array.isArray(b.passengers) ? b.passengers : [];
+    const namesStr = passengersArr.map(p => p.name).join('، ');
     const msg = `مرحباً بك/م *${namesStr}* ✈️\nنود تذكيركم من *مكتب الوصال للطيران* باقتراب موعد رحلتكم:\n\n📍 *خط السير:* ${b.route}\n🛫 *الطيران:* ${b.airline}\n🔖 *رقم الحجز:* ${b.pnrCode}\n📅 *موعد الرحلة:* ${goText}`;
-    const firstPhone = b.passengers[0].phone.replace(/[^0-9]/g, '');
+    const firstPhone = passengersArr.length > 0 ? passengersArr[0].phone.replace(/[^0-9]/g, '') : '';
     window.open(`https://wa.me/${firstPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
@@ -419,7 +446,8 @@ function editBooking(id) {
 
     const container = document.getElementById('passengersListContainer');
     container.innerHTML = '';
-    b.passengers.forEach(p => {
+    const passengersArr = b.passengers && Array.isArray(b.passengers) ? b.passengers : [];
+    passengersArr.forEach(p => {
         addPassengerRow(p.name, p.passport, p.phone);
     });
 
@@ -441,7 +469,8 @@ function addToGoogleCalendar(bookingId) {
         alert("⚠️ لا يوجد تاريخ ذهاب محدد لهذه التذكرة.");
         return;
     }
-    const passengersNames = b.passengers.map(p => p.name).join('، ');
+    const passengersArr = b.passengers && Array.isArray(b.passengers) ? b.passengers : [];
+    const passengersNames = passengersArr.map(p => p.name).join('، ');
     const startDate = new Date(b.goDate);
     const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000));
     const formatGCalDate = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
